@@ -8,30 +8,36 @@ from utils.prompt_manager import PromptManager
 from utils.device_utils import get_system_info, get_recommended_config
 from utils.visualization import PerformanceVisualizer
 
+with open("style.css", "r", encoding="utf-8") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 # Page configuration
 st.set_page_config(page_title="LLM Demo", page_icon="🤖", layout="wide")
 
-# CSS fixes for chat interface
-st.markdown("""
-    <span><span style="color: rgb(150, 34, 73); font-weight: bold;">&lt;style&gt;</span><span style="color: black; font-weight: normal;">
-    .stChatFloatingInputContainer {
-        display: flex !important;
-        padding-bottom: 20px !important;
-        visibility: visible !important;
-    }
-    .stChatInputContainer {
-        display: flex !important;
-        visibility: visible !important;
-    }
-    </span><span style="color: rgb(150, 34, 73); font-weight: bold;">&lt;/style&gt;</span><br><br></span>
-    """, unsafe_allow_html=True)
-
 # Initialize session state variables
+if "pending_user_input" not in st.session_state:
+    st.session_state.pending_user_input = None
+    
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+
+if "is_streaming" not in st.session_state:
+    st.session_state.is_streaming = False
+    
+if "streaming_text" not in st.session_state:
+    st.session_state.streaming_text = ""
+
+if "draft_next" not in st.session_state:
+    st.session_state.draft_next = ""
+    
+if "clear_draft_next" not in st.session_state:
+    st.session_state.clear_draft_next = False
+    
+if "queued_next" not in st.session_state:
+    st.session_state.queued_next = None
     
 if "providers" not in st.session_state:
     st.session_state.providers = {}
@@ -88,7 +94,7 @@ with tab1:
         
         # KV Cache Toggle - Featured prominently as it's a key demo point
         kv_cache_enabled = st.toggle("Enable KV Cache", value=True,
-                               help="KV Cache stores past key-value pairs to speed up generation")
+                            help="KV Cache stores past key-value pairs to speed up generation")
         
         # Model family detection for appropriate prompt formatting
         if "llama" in selected_model.lower():
@@ -159,7 +165,7 @@ with tab1:
                     # Tensor parallel size
                     tensor_parallel = st.slider(
                         "Tensor Parallel Size", 
-                        min_value=1, 
+                        # min_value=0, 
                         max_value=len(available_gpus),
                         value=1
                     )
@@ -204,64 +210,69 @@ with tab1:
                 st.info(f"KV Cache {'enabled' if kv_cache_enabled else 'disabled'}")
 
     # FIXED CHAT INTERFACE
-    with col1:
-        # Create a container for the chat interface
+    with col1:  # This is your left column for chat
+        # Create a container with fixed height for chat history
         chat_container = st.container()
         
+        # Create a fixed space for messages with scrolling
         with chat_container:
-            # Add system message to chat if not already there
-            if not st.session_state.messages or st.session_state.messages[0]["role"] != "system":
-                st.session_state.messages.insert(0, {"role": "system", "content": system_prompt})
-            else:
-                # Update the system message if it's different
-                if st.session_state.messages[0]["content"] != system_prompt:
-                    st.session_state.messages[0]["content"] = system_prompt
+            # Add some spacing at the top
+            st.write("")
             
-            # Display welcome message if no messages
-            if len(st.session_state.messages) <= 1:  # Only system message present
-                st.info("👋 Send a message to start chatting with the LLM!")
-            
-            # Chat history display (skip system message)
-            for message in st.session_state.messages[1:]:
+            # Display existing messages
+            for message in st.session_state.messages[1:]:  # Skip system message
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
-        
-        # Input and response (outside the chat_container to avoid rendering issues)
-        user_input = st.chat_input("Type your message here...", key="unique_chat_input")
-        
-        if user_input:
-            # Add user message to chat
-            st.session_state.messages.append({"role": "user", "content": user_input})
             
-            # Force a rerun to display the user message before generating response
+            # Add extra space at the bottom to ensure the latest messages are visible
+            st.write("")
+            st.write("")
+
+        # Add some space before the input
+        st.write("")
+
+        # if not st.session_state.is_streaming:
+        #     user_input = st.chat_input("Type your message here...")
+        # else:
+        #     user_input = None
+
+        # If a user message was submitted, queue it and rerun so the assistant can stream ABOVE the input
+        if st.session_state.pending_user_input and not st.session_state.is_streaming:
+            st.session_state.messages.append({"role": "user", "content": st.session_state.pending_user_input})
+            st.session_state.pending_user_input = None
+            st.session_state.is_streaming = True
+            st.session_state.streaming_text = ""
             st.rerun()
 
-        # Handle response generation (this runs after the rerun)
-        # Check if the last message is from the user and needs a response
-        if (st.session_state.messages and 
-            len(st.session_state.messages) > 1 and 
-            st.session_state.messages[-1]["role"] == "user"):
-            
-            user_message = st.session_state.messages[-1]["content"]
-            
-            # Display the existing user message
-            with st.chat_message("user"):
-                st.markdown(user_message)
-            
-            # Generate and display assistant response
+        # Stream the assistant response ABOVE the input (so the chat box never sits between messages)
+        if st.session_state.is_streaming:
             with st.chat_message("assistant"):
                 if not st.session_state.active_provider:
                     st.error("Please initialize a model first using the settings panel.")
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": "Please initialize a model first using the settings panel."}
+                    )
+                    st.session_state.is_streaming = False
+                    st.session_state.streaming_text = ""
+                    st.rerun()
                 else:
+                    if st.session_state.clear_draft_next:
+                        st.session_state.draft_next = ""
+                        st.session_state.clear_draft_next = False
+                    st.text_input(
+                        "Type your message here...",                # label
+                        key="draft_next",                           # preserves typed text
+                        label_visibility="collapsed",
+                        placeholder="Assistant is responding… type your next message",
+                    )
                     message_placeholder = st.empty()
                     full_response = ""
-                    
+
                     provider = st.session_state.providers[st.session_state.active_provider]
-                    
+
                     # Start performance measurement
                     st.session_state.performance_visualizer.start_measurement()
-                    
-                    # Stream the response
+
                     try:
                         for response_chunk in provider.generate(
                             messages=st.session_state.messages,
@@ -271,20 +282,53 @@ with tab1:
                             top_k=top_k
                         ):
                             full_response += response_chunk
+                            st.session_state.streaming_text = full_response
                             message_placeholder.markdown(full_response + "▌")
                             st.session_state.performance_visualizer.add_token()
-                        
+
                         # End performance measurement
                         st.session_state.performance_visualizer.end_measurement(provider.use_kv_cache)
-                        
+
                         # Final response without cursor
                         message_placeholder.markdown(full_response)
+
                     except Exception as e:
                         st.error(f"Error generating response: {str(e)}")
                         full_response = f"Error: {str(e)}"
-                    
+
                     # Add assistant message to chat history
                     st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+                    st.session_state.is_streaming = False
+                    st.session_state.streaming_text = ""
+                    # If user typed something during streaming, promote it to a queued message
+                    if st.session_state.get("draft_next"):
+                        st.session_state.queued_next = st.session_state.draft_next
+                        st.session_state.clear_draft_next = True
+                    st.rerun()
+
+        # Chat input at the bottom (only when NOT streaming)
+        if not st.session_state.is_streaming:
+            if st.session_state.queued_next:
+                user_input = st.session_state.queued_next
+                st.session_state.queued_next = None
+            else:
+                user_input = st.chat_input("Type your message here...")
+            if user_input:
+                st.session_state.pending_user_input = user_input
+                st.rerun()
+        
+        st.markdown(
+            """
+            <script>
+            const chatContainer = document.querySelector('[data-testid="stChatMessageContainer"]');
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
 
         # Clear chat button
         if len(st.session_state.messages) > 1 and st.button("Clear Chat History"):
@@ -417,33 +461,10 @@ if st.session_state.active_provider:
         st.caption("Performance metrics not available")
 
 # Add GitHub-style corner badge
-st.markdown(
-    """
-    <span><span style="color: rgb(150, 34, 73); font-weight: bold;">&lt;style&gt;</span><span style="color: black; font-weight: normal;">
-    .github-corner:hover .octo-arm {
-        animation: octocat-wave 560ms ease-in-out;
-    }
-    @keyframes octocat-wave {
-        0%, 100% { transform: rotate(0); }
-        20%, 60% { transform: rotate(-25deg); }
-        40%, 80% { transform: rotate(10deg); }
-    }
-    @media (max-width: 500px) {
-        .github-corner:hover .octo-arm {
-            animation: none;
-        }
-        .github-corner .octo-arm {
-            animation: octocat-wave 560ms ease-in-out;
-        }
-    }
-    </span><span style="color: rgb(150, 34, 73); font-weight: bold;">&lt;/style&gt;</span><br><br></span>
-    <a aria-label="View source on GitHub" class="github-corner" href="https://github.com/yourusername/llm-chat-demo">
-        <span><span style="color: rgb(150, 34, 73); font-weight: bold;">&lt;svg&gt;</span><span style="color: black; font-weight: normal;">
-            
-            
-            
-        </span><span style="color: rgb(150, 34, 73); font-weight: bold;">&lt;/svg&gt;</span><br><br></span>
+st.markdown("""
+<div style="position: absolute; top: 10px; right: 15px; z-index: 1000;">
+    <a style="text-decoration: none; color: #0366d6; font-weight: 600;" href="https://github.com/sampreeth-sarma/LLM-Chat">
+        📂 View on GitHub
     </a>
-    """,
-    unsafe_allow_html=True,
-)
+</div>
+""", unsafe_allow_html=True)
