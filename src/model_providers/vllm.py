@@ -314,9 +314,9 @@ class VLLMProvider(BaseModelProvider):
         """Return common models supported by vLLM"""
         # This is a static list as vLLM doesn't maintain an API to list models
         return [
-            "meta-llama/Llama-3.2-1b",
             "meta-llama/Llama-3.2-1b-Instruct",
             "meta-llama/Llama-3.2-3b-instruct",
+            "meta-llama/Llama-3.2-1b",
             "mistralai/Mistral-7B-Instruct-v0.1",
             "mistralai/Mixtral-8x7B-Instruct-v0.1",
             "Qwen/Qwen-7B-Chat",

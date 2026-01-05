@@ -289,7 +289,7 @@ def render_settings_panel() -> Dict[str, Any]:
 
     config["provider_option"] = st.selectbox(
         "Model Provider",
-        ["Ollama", "vLLM"],
+        ["vLLM", "Ollama"],
         help="Select the model provider"
     )
 
