@@ -45,9 +45,10 @@ def get_system_info():
         
     return info
 
-def get_recommended_config():
+def get_recommended_config(info=None):
     """Recommend configuration based on available hardware"""
-    info = get_system_info()
+    if not info:
+        info = get_system_info()
     
     config = {
         "provider": "ollama",  # Default to Ollama for CPU

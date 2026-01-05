@@ -18,8 +18,9 @@ class BaseModelProvider(ABC):
         """Generate text from messages"""
         pass
     
+    @classmethod
     @abstractmethod
-    def list_models(self):
+    def list_models(cls):
         """List available models"""
         pass
     
@@ -51,3 +52,7 @@ class BaseModelProvider(ABC):
             "total_tokens": self.metrics["total_tokens"],
             "total_time": self.metrics["total_time"]
         }
+    
+    def close(self):
+        """Release resources (GPU memory, processes) if applicable."""
+        return

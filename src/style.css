@@ -1,0 +1,58 @@
+div.block-container { padding-bottom: 100px; }
+
+/* .stChatInputContainer {
+  position: floating;
+  bottom: 20px;
+  width: calc(100% - 420px);
+} */
+
+section[data-testid="stChatMessageContainer"] {
+  margin-bottom: 100px;
+}
+
+/* ===== Sticky Title + Tabs ===== */
+/* ===== Sticky header + tab bar (only the tab buttons) ===== */
+
+/* Sticky Title */
+.main .block-container h1 {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #0e1117;              /* match your dark theme */
+  padding: 12px 0 6px 0;
+  margin: 0;
+}
+
+/* Sticky tab bar (the tab buttons only) */
+div[data-testid="stTabs"] [data-baseweb="tab-list"] {
+  position: sticky;
+  top: 56px;                        /* below title; tweak if needed */
+  z-index: 999;
+  background: #0e1117;
+  padding: 6px 0 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ===== Sticky right panel ===== */
+.sticky-right-panel {
+  position: sticky;
+  top: 112px;                       /* title + tab bar height */
+  z-index: 10;
+  align-self: flex-start;
+}
+
+  /* Optional: slightly tighten spacing so controls fit better */
+/* tighten spacing in right panel so it fits */
+.sticky-right-panel h2, 
+.sticky-right-panel h3 {
+  margin: 8px 0 10px 0 !important;
+}
+
+.sticky-right-panel .stMarkdown {
+  margin-bottom: 6px !important;
+}
+
+.sticky-right-panel [data-testid="stVerticalBlock"] {
+  gap: 0.35rem !important;
+}
+
