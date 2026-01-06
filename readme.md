@@ -28,9 +28,10 @@ source llm/bin/activate
 ```
 
 ### 1.3 Install Python dependencies
-__NOTE:__ We recommend using vllm with a GPU essentially  for performant vLLM inference, as it leverages NVIDIA CUDA (and AMD ROCm/Intel XPU) for parallel processing of LLM workloads, offering significant speedups and better utilization than CPUs. NVIDIA GPUs are the primary target with advanced features like PagedAttention, making them the standard for efficient LLM serving with vLLM. 
+__NOTE:__ 
+- We recommend using vllm with a GPU essentially  for performant vLLM inference, as it leverages NVIDIA CUDA (and AMD ROCm/Intel XPU) for parallel processing of LLM workloads, offering significant speedups and better utilization than CPUs. NVIDIA GPUs are the primary target with advanced features like PagedAttention, making them the standard for efficient LLM serving with vLLM. 
 
-Pytorch and vLLM should be installed separately based on the gpu and/or cuda version you have. View Section 4.2 for more details. Rest of the packages could be installed from here. 
+- Pytorch and vLLM should be installed separately based on the gpu and/or cuda version you have. View Section 4.2 for more details. Rest of the packages could be installed from here.
 ```bash
 pip install -r requirements.txt
 ```
