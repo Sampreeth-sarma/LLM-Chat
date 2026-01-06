@@ -1,4 +1,4 @@
-# LLM Chat Application Demo (Ollama vs vLLM)
+# LLM Chat Application Demo (Ollama & vLLM)
 
 A Streamlit-based chat application to demonstrate and compare **local LLM inference** using:
 
