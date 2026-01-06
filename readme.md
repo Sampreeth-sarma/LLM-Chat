@@ -20,8 +20,10 @@ This demo highlights:
 git clone https://github.com/Sampreeth-sarma/LLM-Chat.git
 cd LLM-Chat
 ```
+Make sure you create a huggingface token and paste it in the `.env.example` file and rename the file to `.env`
 
 ### 1.2 Create Virtual Env
+__NOTE__: Python Version should be >= 3.10
 ```bash
 python3 -m venv llm
 source llm/bin/activate
